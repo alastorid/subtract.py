@@ -3,6 +3,11 @@
 Adaptive audio subtraction for extracting a wanted source from a mix when a
 separate reference track is available.
 
+> This repository is orchestration and signal-processing glue around substantial
+> open-source and research work by the audio-separation community. Please see
+> [Credits and acknowledgments](CREDITS.md) for the people and projects that make
+> it useful.
+
 The script aligns the two recordings, matches their intro levels, compensates
 for timing drift and spectral differences, subtracts the reference, and uses an
 ONNX source-separation model to clean the residual.
@@ -85,3 +90,17 @@ input. WAV, FLAC, MP3, M4A, MP4, and MOV input are supported. Useful options:
 ```
 
 Run `./split.py --help` for all options.
+
+## Credits
+
+The heavy lifting comes from [MelBand-RoFormer-Infer](https://github.com/openmirlab/melband-roformer-infer),
+[Kimberley Jensen's Mel-Band RoFormer vocal model](https://huggingface.co/KimberleyJSN/melbandroformer),
+[BS-RoFormer](https://github.com/lucidrains/BS-RoFormer),
+[python-audio-separator](https://github.com/nomadkaraoke/python-audio-separator),
+[Ultimate Vocal Remover](https://github.com/Anjok07/ultimatevocalremovergui),
+[KUIELAB-MDX-Net](https://github.com/kuielab/mdx-net), and
+[Apple MLX](https://github.com/ml-explore/mlx), along with FFmpeg, NumPy, SciPy,
+SoundFile, ONNX Runtime, and PyTorch.
+
+See [CREDITS.md](CREDITS.md) for individual attribution, the original research
+citation, and licensing notes.
