@@ -1,5 +1,9 @@
-.DS_Store
+node_modules/
+dist/
+model-build/
 __pycache__/
+.sites-runtime/
+.DS_Store
 *.py[cod]
 .venv/
 .subenv/
@@ -8,4 +12,3 @@ __pycache__/
 *.mp3
 *.onnx
 *.ckpt
-

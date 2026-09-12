@@ -104,3 +104,29 @@ SoundFile, ONNX Runtime, and PyTorch.
 
 See [CREDITS.md](CREDITS.md) for individual attribution, the original research
 citation, and licensing notes.
+
+## WebGPU stem studio
+
+The repository also contains a private, browser-only version of `split.py`.
+It runs the neural network, FFT, and overlap-add pipeline with WebGPU; audio is
+decoded, separated, auditioned, and exported on the user's device. No audio is
+uploaded to a server.
+
+The production site is deployed from `main` with GitHub Pages. For local
+development:
+
+```bash
+npm install
+npm run dev
+```
+
+Use a current Chrome or Edge build with WebGPU enabled. The first separation
+downloads the FP16 model from the repository's `webgpu-model-v1` release and
+caches it in the browser. The page writes 32-bit float WAV files named
+`TRACK_vocals.wav` and `TRACK_instrumental.wav`.
+
+The WebGPU model is an export of the exact Kimberley Jensen checkpoint used by
+the default native workflow. It keeps the native 352,800-sample chunk size,
+50% overlap, edge reflection, linear crossfades, and residual subtraction.
+See [WEBGPU.md](WEBGPU.md) for architecture, hashes, and reproducible export
+instructions.

@@ -1,0 +1,44 @@
+name: Deploy WebGPU studio to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Stage versioned WebGPU model
+        run: |
+          mkdir -p dist/models
+          gh release download webgpu-model-v1 --repo "$GITHUB_REPOSITORY" --pattern 'kim_vocals_core_t801_webgpu.onnx*' --dir dist/models
+          echo '6fde2f095b72ce1af3b4b299465833a72842b14752e42ae0f29a5ecc4f3d9430  dist/models/kim_vocals_core_t801_webgpu.onnx' | sha256sum --check
+          echo 'd32e854683bd2fd9db7ccd25dbce74c7dbb3360cdf8e4870bdf062e8499cc53c  dist/models/kim_vocals_core_t801_webgpu.onnx.data' | sha256sum --check
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}

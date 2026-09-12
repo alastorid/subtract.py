@@ -1,0 +1,213 @@
+import { type FourierConfig } from '../../config.es.js';
+import {
+  createRadix8PreferredCounts,
+  createRadixStages,
+  expandRadix8PreferredStages,
+  isPowerOfTwo,
+  type MultiPassRadixStage,
+  type Radix8PreferredStageCounts,
+  type RadixStageCounts,
+} from '../../factorization.es.js';
+
+const minPackedWindowSize = 2;
+const pairThreadsPerGroup = 8;
+
+const maxPairGroupSize = 64;
+
+const selectPairThreadCount = (groupSize: number): number =>
+  groupSize === 64 ? 64 : 128;
+
+export type ScratchBufferIndex = 0 | 1;
+
+type MultiPassKernelBase = {
+  stageStride: number;
+  readFromInput: boolean;
+  readBufferIndex: ScratchBufferIndex;
+  writeBufferIndex: ScratchBufferIndex;
+  workgroupCount: number;
+  threadCount: number;
+};
+
+export type PackedStockhamR2cKernel =
+  | (MultiPassKernelBase & {
+      kind: 'single';
+      factor: MultiPassRadixStage;
+      fuseR2cPack: boolean;
+    })
+  | (MultiPassKernelBase & {
+      kind: 'pair';
+      factor1: MultiPassRadixStage;
+      factor2: MultiPassRadixStage;
+    });
+
+const createMultiPassKernels = (
+  packedWindowSize: number,
+  radixStageList: readonly MultiPassRadixStage[],
+  maxComputeWorkgroupsPerDimension: number,
+): PackedStockhamR2cKernel[] | undefined => {
+  const kernels: PackedStockhamR2cKernel[] = [];
+  let stageStride = 1;
+  let stageIndex = 0;
+  while (stageIndex < radixStageList.length) {
+    const factor = radixStageList[stageIndex];
+    const nextFactor =
+      stageIndex + 1 < radixStageList.length - 1
+        ? radixStageList[stageIndex + 1]
+        : undefined;
+    const kernelIndex = kernels.length;
+    const readBufferIndex: ScratchBufferIndex = kernelIndex % 2 === 0 ? 1 : 0;
+    const writeBufferIndex: ScratchBufferIndex = kernelIndex % 2 === 0 ? 0 : 1;
+    const base = {
+      stageStride,
+      readFromInput: stageIndex === 0,
+      readBufferIndex,
+      writeBufferIndex,
+    };
+
+    if (nextFactor !== undefined && factor * nextFactor <= maxPairGroupSize) {
+      const groupSize = factor * nextFactor;
+      const groupCount = packedWindowSize / groupSize;
+      const threadCount = selectPairThreadCount(groupSize);
+      kernels.push({
+        ...base,
+        kind: 'pair',
+        factor1: factor,
+        factor2: nextFactor,
+        threadCount,
+        workgroupCount: Math.ceil(
+          groupCount / (threadCount / pairThreadsPerGroup),
+        ),
+      });
+      stageStride *= groupSize;
+      stageIndex += 2;
+      continue;
+    }
+
+    const isLast = stageIndex === radixStageList.length - 1;
+    const singleThreadCount = 64;
+    const fusedPackHalvesButterflyThreads = isLast;
+    const threadTotal = fusedPackHalvesButterflyThreads
+      ? Math.floor(packedWindowSize / factor / 2) + 1
+      : packedWindowSize / factor;
+    kernels.push({
+      ...base,
+      kind: 'single',
+      factor,
+      fuseR2cPack: isLast,
+      threadCount: singleThreadCount,
+      workgroupCount: Math.ceil(threadTotal / singleThreadCount),
+    });
+    stageStride *= factor;
+    stageIndex += 1;
+  }
+
+  for (const kernel of kernels) {
+    if (kernel.workgroupCount > maxComputeWorkgroupsPerDimension) {
+      return undefined;
+    }
+  }
+
+  return kernels;
+};
+
+type PackedStockhamR2cBaseVariant = {
+  windowSize: number;
+  packedWindowSize: number;
+  log2PackedWindowSize: number;
+  radixStageCounts: RadixStageCounts;
+};
+
+export type PackedStockhamR2cVariant =
+  | (PackedStockhamR2cBaseVariant & {
+      kind: 'stockham' | 'inPlaceRadix4';
+    })
+  | (PackedStockhamR2cBaseVariant & {
+      kind: 'inPlaceMixed';
+      inPlaceStageCounts: Radix8PreferredStageCounts;
+    })
+  | (PackedStockhamR2cBaseVariant & {
+      kind: 'multiPass';
+      kernels: PackedStockhamR2cKernel[];
+    });
+
+export const getPackedStockhamR2cVariant = (
+  device: GPUDevice,
+  config: FourierConfig,
+): PackedStockhamR2cVariant | undefined => {
+  const packedWindowSize = config.windowSize / 2;
+  const radixStageCounts = createRadixStages(packedWindowSize);
+  if (
+    radixStageCounts === undefined ||
+    packedWindowSize < minPackedWindowSize
+  ) {
+    return undefined;
+  }
+
+  const maxStockhamPackedWindowSize = Math.floor(
+    device.limits.maxComputeWorkgroupStorageSize / 16,
+  );
+  if (packedWindowSize <= maxStockhamPackedWindowSize) {
+    return {
+      kind: 'stockham',
+      windowSize: config.windowSize,
+      packedWindowSize,
+      log2PackedWindowSize: Math.log2(packedWindowSize),
+      radixStageCounts,
+    };
+  }
+
+  const log2PackedWindowSize = Math.log2(packedWindowSize);
+  const maxInPlacePackedWindowSize = Math.floor(
+    device.limits.maxComputeWorkgroupStorageSize / 8,
+  );
+  if (
+    isPowerOfTwo(packedWindowSize) &&
+    packedWindowSize <= maxInPlacePackedWindowSize &&
+    log2PackedWindowSize % 2 === 0
+  ) {
+    return {
+      kind: 'inPlaceRadix4',
+      windowSize: config.windowSize,
+      packedWindowSize,
+      log2PackedWindowSize,
+      radixStageCounts,
+    };
+  }
+
+  const inPlaceStageCounts = createRadix8PreferredCounts(packedWindowSize);
+  if (
+    packedWindowSize <= maxInPlacePackedWindowSize &&
+    inPlaceStageCounts !== undefined
+  ) {
+    return {
+      kind: 'inPlaceMixed',
+      windowSize: config.windowSize,
+      packedWindowSize,
+      log2PackedWindowSize,
+      radixStageCounts,
+      inPlaceStageCounts,
+    };
+  }
+
+  const radixStageList = expandRadix8PreferredStages(packedWindowSize);
+  if (radixStageList === undefined) {
+    return undefined;
+  }
+  const kernels = createMultiPassKernels(
+    packedWindowSize,
+    radixStageList,
+    device.limits.maxComputeWorkgroupsPerDimension,
+  );
+  if (kernels === undefined) {
+    return undefined;
+  }
+
+  return {
+    kind: 'multiPass',
+    windowSize: config.windowSize,
+    packedWindowSize,
+    log2PackedWindowSize,
+    radixStageCounts,
+    kernels,
+  };
+};

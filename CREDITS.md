@@ -14,6 +14,9 @@ the work of the people and projects below.
 - [OpenMIRLab's MelBand-RoFormer-Infer](https://github.com/openmirlab/melband-roformer-infer)
   provides the packaged inference API, model registry, verified checkpoint
   downloading, output manifests, and the native MLX backend used by `split.py`.
+- [Musetric](https://github.com/musetric/musetric) supplies the MIT-licensed
+  browser WebGPU FFT, zero-copy ONNX Runtime integration, STFT/iSTFT shaders,
+  and the export graph transformations used by the WebGPU application.
 - [Phil Wang (lucidrains)](https://github.com/lucidrains) created the
   [BS-RoFormer PyTorch implementation](https://github.com/lucidrains/BS-RoFormer)
   on which the Mel-Band/Band-Split RoPE Transformer implementation is based.
@@ -51,16 +54,17 @@ This project also depends on the work of the maintainers and contributors to:
   [mlx-spectro](https://github.com/ssmall256/mlx-spectro) for native Apple
   Silicon tensor and spectral computation
 - [PyTorch](https://github.com/pytorch/pytorch) and
-  [ONNX Runtime](https://github.com/microsoft/onnxruntime) for model inference
+  [ONNX Runtime](https://github.com/microsoft/onnxruntime) for model conversion
+  and WebGPU inference
 - [FFmpeg](https://ffmpeg.org/), [NumPy](https://numpy.org/),
   [SciPy](https://scipy.org/), and [python-soundfile](https://github.com/bastibe/python-soundfile)
   for media decoding and numerical/audio processing
 
 ## Licensing note
 
-The linked software projects retain their own copyrights and licenses; many are
-MIT-licensed. Model checkpoints may have separate terms set by their trainers or
-distributors. This repository does not bundle upstream source trees or model
-weights: dependencies are installed from their projects, and checkpoints are
-downloaded into the user's cache. Consult each linked project or model card for
-the terms that apply to redistribution and use.
+The linked software projects retain their own copyrights and licenses. The
+browser application vendors the specifically identified MIT-licensed Musetric
+runtime files and redistributes the MIT-licensed Kimberley Jensen checkpoint as
+a converted ONNX release asset. Their notices are preserved in
+`THIRD_PARTY_NOTICES.md`, `src/vendor/musetric/LICENSE`, and
+`MODEL_LICENSE.md`. Other dependencies are installed from their projects.
