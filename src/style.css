@@ -54,6 +54,13 @@ code { color: #ddd9cf; font-family: "DM Mono", monospace; font-size: .9em; }
 .progress-stats span { display: block; color: #737780; font-size: 13px; margin-bottom: 6px; }
 .progress-stats strong { display: block; font-size: 15px; font-weight: 600; }
 .model-note { font: 12px "DM Mono", monospace; line-height: 1.6; }
+.live-results { grid-column: 1 / -1; display: grid; gap: 8px; padding-top: 22px; border-top: 1px solid #2a2d33; }
+.live-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 18px; margin-bottom: 4px; }
+.live-heading strong { font-size: 14px; }
+.live-heading span { color: #737780; font: 11px "DM Mono", monospace; }
+.live-wave-row { min-height: 58px; display: grid; grid-template-columns: 76px 1fr; gap: 16px; align-items: center; padding: 6px 12px; border: 1px solid #272a31; border-radius: 10px; background: #0e0f13; }
+.live-wave-row > span { color: #a7a9b0; font-size: 13px; font-weight: 600; }
+.live-wave-row canvas { width: 100%; height: 44px; display: block; }
 .studio { border-top: 1px solid #292c33; padding-top: 28px; }
 .now-playing { display: grid; grid-template-columns: 84px 1fr auto; gap: 22px; align-items: center; margin-bottom: 28px; }
 .cover { width: 84px; height: 84px; border-radius: 8px; background: #ff5c35; color: #111216; display: grid; place-items: center; position: relative; overflow: hidden; font: 700 27px "DM Mono", monospace; }
@@ -98,6 +105,8 @@ footer { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 24px 0 
   .now-playing { grid-template-columns: 68px 1fr; } .cover { width: 68px; height: 68px; } .quiet-button { grid-column: 1 / -1; }
   .transport { grid-template-columns: 32px 50px 32px 1fr; } .master-wave { grid-column: 1 / -1; grid-row: 2; } .timecode { display: none; }
   .progress-stats { grid-template-columns: 1fr; }
+  .live-heading { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .live-wave-row { grid-template-columns: 54px 1fr; gap: 8px; padding-inline: 9px; }
   .stem { grid-template-columns: 1fr 112px; gap: 10px; padding: 12px; } .stem-index { display: none; }
   .stem-wave { grid-column: 1 / -1; grid-row: 2; height: 46px; }
   .stem-actions { grid-column: 2; grid-row: 1; }

@@ -116,6 +116,50 @@ export function waveformPeaks(audio: StereoAudio, bins = 1200): Float32Array {
   return output;
 }
 
+export function addSegmentPeaks(
+  peaks: Float32Array,
+  left: Float32Array,
+  right: Float32Array,
+  startSample: number,
+  totalSamples: number,
+): void {
+  if (!totalSamples) return;
+  for (let i = 0; i < left.length; i += 1) {
+    const bin = Math.min(peaks.length - 1, Math.floor(((startSample + i) / totalSamples) * peaks.length));
+    peaks[bin] = Math.max(peaks[bin], Math.abs(left[i]), Math.abs(right[i]));
+  }
+}
+
+export function drawBuildingWaveform(
+  canvas: HTMLCanvasElement,
+  peaks: Float32Array,
+  completion: number,
+  color: string,
+): void {
+  const ratio = window.devicePixelRatio || 1;
+  const width = Math.max(1, canvas.clientWidth);
+  const height = Math.max(1, canvas.clientHeight);
+  if (canvas.width !== width * ratio || canvas.height !== height * ratio) {
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+  }
+  const ctx = canvas.getContext("2d")!;
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  const mid = height / 2;
+  ctx.fillStyle = "rgba(255,255,255,.08)";
+  ctx.fillRect(0, mid, width, 1);
+  const max = Math.max(...peaks, 0.001);
+  const bars = Math.max(1, Math.floor(width / 3));
+  const completedBars = Math.ceil(bars * Math.max(0, Math.min(1, completion)));
+  ctx.fillStyle = color;
+  for (let x = 0; x < completedBars; x += 1) {
+    const sample = peaks[Math.min(peaks.length - 1, Math.floor((x / bars) * peaks.length))] / max;
+    const h = Math.max(1.5, sample * (height - 8));
+    ctx.fillRect(x * 3, mid - h / 2, 1.5, h);
+  }
+}
+
 export function drawWaveform(canvas: HTMLCanvasElement, peaks: Float32Array, progress: number, color: string): void {
   const ratio = window.devicePixelRatio || 1;
   const width = Math.max(1, canvas.clientWidth);

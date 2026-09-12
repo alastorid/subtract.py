@@ -10,8 +10,8 @@ the GPU:
 3. ONNX Runtime Web's WebGPU execution provider runs the Mel-Band RoFormer
    neural core.
 4. WebGPU mask application, inverse FFT, and overlap-add.
-5. The same 352,800-sample chunks, 50% overlap, reflected borders, and linear
-   fades as the native `split.py` backend.
+5. The same 352,800-sample chunks, reflected borders, and linear fades as the
+   native `split.py` backend, with a two-second browser overlap to reduce GPU work.
 6. Instrumental is computed as `original - vocals`, without normalization.
 
 The graph is split from its external weights. Both files are published in the

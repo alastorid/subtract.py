@@ -127,6 +127,7 @@ caches it in the browser. The page writes 32-bit float WAV files named
 
 The WebGPU model is an export of the exact Kimberley Jensen checkpoint used by
 the default native workflow. It keeps the native 352,800-sample chunk size,
-50% overlap, edge reflection, linear crossfades, and residual subtraction.
+edge reflection, linear crossfades, and residual subtraction. The browser uses
+an optimized two-second overlap to reduce GPU work.
 See [WEBGPU.md](WEBGPU.md) for architecture, hashes, and reproducible export
 instructions.

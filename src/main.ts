@@ -1,6 +1,13 @@
 import "./style.css";
 import { decodeAudio, durationLabel, encodeFloatWav } from "./audio";
-import { StemPlayer, drawWaveform, waveformPeaks, type TrackId } from "./player";
+import {
+  StemPlayer,
+  addSegmentPeaks,
+  drawBuildingWaveform,
+  drawWaveform,
+  waveformPeaks,
+  type TrackId,
+} from "./player";
 import { separateVocals, type StereoAudio } from "./separation";
 
 const $ = <T extends HTMLElement>(selector: string): T => document.querySelector(selector)!;
@@ -13,6 +20,9 @@ const player = new StemPlayer();
 let tracks: Partial<Record<TrackId, StereoAudio>> = {};
 let peaks: Partial<Record<TrackId, Float32Array>> = {};
 let baseName = "track";
+let liveVocalsPeaks = new Float32Array(1200);
+let liveInstrumentalPeaks = new Float32Array(1200);
+let liveCompletion = 0;
 
 const setView = (view: "drop" | "progress" | "studio" | "error") => {
   dropCard.hidden = view !== "drop";
@@ -22,7 +32,7 @@ const setView = (view: "drop" | "progress" | "studio" | "error") => {
 };
 
 const etaLabel = (seconds?: number): string => {
-  if (seconds === undefined || !Number.isFinite(seconds)) return "Getting ready…";
+  if (seconds === undefined || !Number.isFinite(seconds)) return "Calculating…";
   if (seconds < 8) return "Less than 10 seconds left";
   if (seconds < 60) return `${Math.ceil(seconds / 5) * 5} seconds left`;
   const minutes = Math.ceil(seconds / 60);
@@ -42,9 +52,9 @@ const updateProgress = (
   $("#progress-percent").textContent = `${Math.round(fraction * 100)}%`;
   ($("#progress-fill") as HTMLElement).style.width = `${Math.max(2, fraction * 100)}%`;
   $("#progress-eta").textContent = etaLabel(etaSeconds);
-  $("#progress-processed").textContent = totalSeconds === undefined
-    ? "Waiting to begin"
-    : `${durationLabel(processedSeconds ?? 0)} of ${durationLabel(totalSeconds)}`;
+  if (totalSeconds !== undefined) {
+    $("#progress-processed").textContent = `${durationLabel(processedSeconds ?? 0)} of ${durationLabel(totalSeconds)}`;
+  }
 };
 
 const updateDevice = async () => {
@@ -85,6 +95,10 @@ const downloadTrack = (id: "vocals" | "instrumental") => {
 };
 
 const drawAll = () => {
+  if (!progressCard.hidden) {
+    drawBuildingWaveform($("#live-vocals-wave") as HTMLCanvasElement, liveVocalsPeaks, liveCompletion, "#ff5c35");
+    drawBuildingWaveform($("#live-instrumental-wave") as HTMLCanvasElement, liveInstrumentalPeaks, liveCompletion, "#39d4a0");
+  }
   const progress = player.getDuration() ? player.getPosition() / player.getDuration() : 0;
   const activePeaks = peaks[player.getWaveformTrack()] ?? peaks.vocals;
   if (activePeaks) drawWaveform($("#master-wave") as HTMLCanvasElement, activePeaks, progress, "#f5f2ea");
@@ -122,7 +136,11 @@ const processFile = async (file: File) => {
     return;
   }
   baseName = file.name.replace(/\.[^.]+$/, "") || "track";
+  liveVocalsPeaks = new Float32Array(1200);
+  liveInstrumentalPeaks = new Float32Array(1200);
+  liveCompletion = 0;
   setView("progress");
+  $("#progress-processed").textContent = "Waiting to begin";
   updateProgress("Opening your song", "Reading the audio on this device…", 0.01);
   try {
     const original = await decodeAudio(file);
@@ -131,8 +149,12 @@ const processFile = async (file: File) => {
     updateProgress("Getting ready", "Preparing the song separator. This takes longer the first time…", 0.03);
     const separated = await separateVocals(original, ({ phase, fraction, detail, etaSeconds, processedSeconds, totalSeconds }) => {
       const title = phase === "model" ? "Getting ready" : phase === "separating" ? "Splitting your song" : "Almost done";
-      const scaled = phase === "model" ? 0.04 : phase === "separating" ? 0.08 + fraction * 0.88 : 0.98;
+      const scaled = phase === "model" ? fraction * 0.08 : phase === "separating" ? 0.08 + fraction * 0.9 : 0.99;
       updateProgress(title, detail, scaled, etaSeconds, processedSeconds, totalSeconds);
+    }, ({ startSample, endSample, vocalsLeft, vocalsRight, instrumentalLeft, instrumentalRight }) => {
+      addSegmentPeaks(liveVocalsPeaks, vocalsLeft, vocalsRight, startSample, original.left.length);
+      addSegmentPeaks(liveInstrumentalPeaks, instrumentalLeft, instrumentalRight, startSample, original.left.length);
+      liveCompletion = endSample / original.left.length;
     });
     tracks = { original, ...separated };
     peaks = {

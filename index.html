@@ -52,10 +52,15 @@
           <p id="progress-detail">Opening your song…</p>
           <div class="progress-track"><div id="progress-fill"></div></div>
           <div class="progress-stats">
-            <div><span>About</span><strong id="progress-eta">Getting ready…</strong></div>
+            <div><span>Estimated time</span><strong id="progress-eta">Calculating…</strong></div>
             <div><span>Song processed</span><strong id="progress-processed">0:00</strong></div>
           </div>
           <p class="model-note">The first song may take longer while the app gets ready. Later songs start faster.</p>
+        </div>
+        <div class="live-results" id="live-results">
+          <div class="live-heading"><strong>Your tracks are taking shape</strong><span>Finished sections appear as they’re ready</span></div>
+          <div class="live-wave-row"><span>Voice</span><canvas id="live-vocals-wave" aria-label="Voice waveform being created"></canvas></div>
+          <div class="live-wave-row"><span>Music</span><canvas id="live-instrumental-wave" aria-label="Music waveform being created"></canvas></div>
         </div>
       </section>
 
