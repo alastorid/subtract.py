@@ -54,3 +54,34 @@ SUB_SKIP_AI=1 ./sub.py MIX.wav REFERENCE.wav OUTPUT.wav
 The AI model is downloaded automatically on first use and cached by
 `audio-separator`.
 
+## Standalone vocal separation (`split.py`)
+
+`split.py` is a separate, single-input workflow for making high-quality vocals
+and instrumental stems with Mel-Band RoFormer. On Apple Silicon it uses native
+MLX by default, falls back to Torch MPS only when MLX is unavailable, and never
+silently runs on CPU.
+
+One-time setup:
+
+```bash
+./setup_roformer.sh
+```
+
+The setup creates `~/.roformer`; `split.py` automatically uses it without shell
+activation. The first separation downloads and verifies the recommended Kim
+vocals checkpoint (about 913 MB), which is then cached.
+
+```bash
+./split.py input.wav
+```
+
+This writes exactly `input_vocals.wav` and `input_instrumental.wav` beside the
+input. WAV, FLAC, MP3, M4A, MP4, and MOV input are supported. Useful options:
+
+```bash
+./split.py input.m4a --output-dir stems --backend mlx --format flac
+./split.py input.wav --backend mps
+./split.py input.wav --backend cpu  # explicit opt-in only
+```
+
+Run `./split.py --help` for all options.
