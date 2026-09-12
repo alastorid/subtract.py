@@ -10,11 +10,7 @@ export class StemPlayer {
   private startedAt = 0;
   private offset = 0;
   private playing = false;
-  private muted = new Map<TrackId, boolean>([
-    ["original", true],
-    ["vocals", false],
-    ["instrumental", true],
-  ]);
+  private active: TrackId = "vocals";
   onState?: (playing: boolean) => void;
 
   constructor() {
@@ -32,18 +28,13 @@ export class StemPlayer {
     this.offset = 0;
   }
 
-  setMuted(id: TrackId, muted: boolean): void {
-    this.muted.set(id, muted);
+  setActive(id: TrackId): void {
+    if (!this.tracks.has(id)) return;
+    this.active = id;
     this.applyGains();
   }
 
-  isMuted(id: TrackId): boolean { return this.muted.get(id) ?? true; }
-
-  getWaveformTrack(): TrackId {
-    if (!this.isMuted("vocals")) return "vocals";
-    if (!this.isMuted("instrumental")) return "instrumental";
-    return "vocals";
-  }
+  getActive(): TrackId { return this.active; }
   getDuration(): number { return (this.tracks.get("original")?.left.length ?? 0) / 44_100; }
   getPosition(): number {
     if (!this.playing) return this.offset;
@@ -100,7 +91,7 @@ export class StemPlayer {
   }
 
   private applyGains(): void {
-    for (const [id, gain] of this.gains) gain.gain.value = this.isMuted(id) ? 0 : 1;
+    for (const [id, gain] of this.gains) gain.gain.value = id === this.active ? 1 : 0;
   }
 }
 

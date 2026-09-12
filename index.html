@@ -67,7 +67,7 @@
       <section class="studio" id="studio" hidden>
         <div class="now-playing">
           <div class="cover"><span>S−</span><div class="cover-lines"></div></div>
-          <div class="track-meta"><span id="track-kicker">VOCALS ON · MUSIC MUTED</span><h2 id="track-name">Track</h2><p id="track-info">Ready to play</p></div>
+          <div class="track-meta"><span id="track-kicker">READY TO LISTEN</span><h2 id="track-name">Track</h2><p id="track-info">Ready to play</p></div>
           <button id="new-track" class="quiet-button" type="button">Choose another song</button>
         </div>
 
@@ -80,19 +80,24 @@
           <span id="total-time" class="timecode">0:00</span>
         </div>
 
-        <div class="stem-list" aria-label="Separated tracks">
-          <article class="stem audible" data-track="vocals">
-            <div class="stem-label"><span class="stem-index">01</span><span><strong>Voice</strong><small>Singing and spoken words</small></span></div>
+        <div class="stem-list" role="radiogroup" aria-label="Choose what to hear">
+          <article class="stem" data-track="original">
+            <button class="stem-select" type="button" role="radio" aria-checked="false"><span class="stem-index">01</span><span><strong>Original</strong><small>Voice and music together</small></span></button>
+            <canvas class="stem-wave" data-wave="original"></canvas>
+            <span class="stem-badge">MIX</span>
+          </article>
+          <article class="stem active" data-track="vocals">
+            <button class="stem-select" type="button" role="radio" aria-checked="true"><span class="stem-index">02</span><span><strong>Voice</strong><small>Singing and spoken words</small></span></button>
             <canvas class="stem-wave" data-wave="vocals"></canvas>
-            <div class="stem-actions"><button class="mute" data-mute="vocals" type="button" aria-pressed="false"><span aria-hidden="true">●</span> On</button><button class="download" data-download="vocals" type="button" aria-label="Download voice track">↓</button></div>
+            <button class="download" data-download="vocals" type="button" aria-label="Download voice track">↓</button>
           </article>
           <article class="stem" data-track="instrumental">
-            <div class="stem-label"><span class="stem-index">02</span><span><strong>Music</strong><small>Instruments without the voice</small></span></div>
+            <button class="stem-select" type="button" role="radio" aria-checked="false"><span class="stem-index">03</span><span><strong>Music</strong><small>Instruments without the voice</small></span></button>
             <canvas class="stem-wave" data-wave="instrumental"></canvas>
-            <div class="stem-actions"><button class="mute is-muted" data-mute="instrumental" type="button" aria-pressed="true"><span aria-hidden="true">○</span> Muted</button><button class="download" data-download="instrumental" type="button" aria-label="Download music track">↓</button></div>
+            <button class="download" data-download="instrumental" type="button" aria-label="Download music track">↓</button>
           </article>
         </div>
-        <p class="subtraction-note">Turn either track on or off to hear exactly what you want.</p>
+        <p class="subtraction-note">Choose a row to hear that version.</p>
       </section>
 
       <section class="error-card" id="error-card" hidden aria-live="assertive"><strong>We couldn’t split this song</strong><p id="error-message"></p><button id="retry" type="button">Choose another song</button></section>

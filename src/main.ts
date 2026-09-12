@@ -100,10 +100,10 @@ const drawAll = () => {
     drawBuildingWaveform($("#live-instrumental-wave") as HTMLCanvasElement, liveInstrumentalPeaks, liveCompletion, "#39d4a0");
   }
   const progress = player.getDuration() ? player.getPosition() / player.getDuration() : 0;
-  const activePeaks = peaks[player.getWaveformTrack()] ?? peaks.vocals;
+  const activePeaks = peaks[player.getActive()] ?? peaks.vocals;
   if (activePeaks) drawWaveform($("#master-wave") as HTMLCanvasElement, activePeaks, progress, "#f5f2ea");
   const colors: Record<TrackId, string> = { original: "#c9c7c1", vocals: "#ff5c35", instrumental: "#39d4a0" };
-  for (const id of ["vocals", "instrumental"] as TrackId[]) {
+  for (const id of ["original", "vocals", "instrumental"] as TrackId[]) {
     const canvas = document.querySelector(`[data-wave="${id}"]`) as HTMLCanvasElement;
     if (canvas && peaks[id]) drawWaveform(canvas, peaks[id]!, progress, colors[id]);
   }
@@ -112,21 +112,13 @@ const drawAll = () => {
   requestAnimationFrame(drawAll);
 };
 
-const updateMixer = () => {
+const activateTrack = (id: TrackId) => {
+  player.setActive(id);
   document.querySelectorAll<HTMLElement>(".stem").forEach((row) => {
-    const id = row.dataset.track as TrackId;
-    const muted = player.isMuted(id);
-    const button = row.querySelector<HTMLElement>("[data-mute]");
-    row.classList.toggle("audible", !muted);
-    button?.classList.toggle("is-muted", muted);
-    button?.setAttribute("aria-pressed", String(muted));
-    if (button) button.innerHTML = muted
-      ? '<span aria-hidden="true">○</span> Muted'
-      : '<span aria-hidden="true">●</span> On';
+    const selected = row.dataset.track === id;
+    row.classList.toggle("active", selected);
+    row.querySelector("[role=radio]")?.setAttribute("aria-checked", String(selected));
   });
-  const vocals = player.isMuted("vocals") ? "VOCALS MUTED" : "VOCALS ON";
-  const music = player.isMuted("instrumental") ? "MUSIC MUTED" : "MUSIC ON";
-  $("#track-kicker").textContent = `${vocals} · ${music}`;
 };
 
 const processFile = async (file: File) => {
@@ -163,10 +155,7 @@ const processFile = async (file: File) => {
       instrumental: waveformPeaks(separated.instrumental),
     };
     player.setTracks(tracks);
-    player.setMuted("original", true);
-    player.setMuted("vocals", false);
-    player.setMuted("instrumental", true);
-    updateMixer();
+    activateTrack("vocals");
     $("#track-name").textContent = baseName;
     $("#track-info").textContent = `${durationLabel(original.left.length / original.sampleRate)} · Two tracks ready to play`;
     $("#total-time").textContent = durationLabel(original.left.length / original.sampleRate);
@@ -196,10 +185,9 @@ $("#master-wave").addEventListener("click", (event) => {
   const canvas = event.currentTarget as HTMLCanvasElement;
   player.seek(((event as MouseEvent).offsetX / canvas.clientWidth) * player.getDuration());
 });
-document.querySelectorAll<HTMLElement>("[data-mute]").forEach((button) => button.addEventListener("click", () => {
-  const id = button.dataset.mute as TrackId;
-  player.setMuted(id, !player.isMuted(id));
-  updateMixer();
+document.querySelectorAll<HTMLElement>(".stem-select").forEach((button) => button.addEventListener("click", () => {
+  const row = button.closest<HTMLElement>(".stem");
+  if (row) activateTrack(row.dataset.track as TrackId);
 }));
 document.querySelectorAll<HTMLElement>("[data-download]").forEach((button) => button.addEventListener("click", () => downloadTrack(button.dataset.download as "vocals" | "instrumental")));
 for (const selector of ["#new-track", "#retry"]) $(selector).addEventListener("click", () => { player.pause(); fileInput.value = ""; setView("drop"); });
