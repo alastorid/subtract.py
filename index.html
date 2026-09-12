@@ -4,24 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0a0b0f" />
-    <meta name="description" content="Private, in-browser Mel-Band RoFormer vocal separation powered by WebGPU." />
+    <meta name="description" content="Split a song into vocals and instrumental, privately in your browser." />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <title>Subtract — WebGPU Stem Studio</title>
   </head>
   <body>
     <header class="topbar">
       <a class="brand" href="./" aria-label="Subtract home"><span class="brand-mark">S−</span><span>SUBTRACT</span></a>
-      <div class="device-pill" id="device-pill"><i></i><span id="device-label">Checking WebGPU</span></div>
+      <div class="device-pill" id="device-pill"><i></i><span id="device-label">Checking this device</span></div>
       <a class="github-link" href="https://github.com/alastorid/subtract.py" target="_blank" rel="noreferrer">Source ↗</a>
     </header>
 
     <main>
       <section class="intro">
         <div>
-          <p class="eyebrow">PRIVATE STEM STUDIO</p>
-          <h1>Hear what was<br /><em>hidden.</em></h1>
+          <p class="eyebrow">YOUR PRIVATE SONG SPLITTER</p>
+          <h1>Hear every<br /><em>part.</em></h1>
         </div>
-        <p class="intro-copy">Separate vocals and instrumental locally with the same Mel-Band RoFormer model as <code>split.py</code>. Your recording never leaves this device.</p>
+        <p class="intro-copy">Turn one song into two tracks: the voice and the music. Everything happens on this device, so your song stays private.</p>
       </section>
 
       <section class="drop-card" id="drop-card">
@@ -31,24 +31,28 @@
           <span class="drop-title">Drop a song here</span>
           <span class="drop-note">or choose WAV, FLAC, MP3, or M4A</span>
         </button>
-        <div class="privacy-note"><span>⌁</span> Processing stays in your browser</div>
+        <div class="privacy-note"><span>⌁</span> Your song never leaves this device</div>
       </section>
 
       <section class="progress-card" id="progress-card" hidden aria-live="polite">
         <div class="record-disc"><div></div></div>
         <div class="progress-copy">
           <div class="progress-heading"><strong id="progress-title">Preparing</strong><span id="progress-percent">0%</span></div>
-          <p id="progress-detail">Reading audio…</p>
+          <p id="progress-detail">Opening your song…</p>
           <div class="progress-track"><div id="progress-fill"></div></div>
-          <p class="model-note">The ~460 MB model is downloaded once, then kept in your browser cache.</p>
+          <div class="progress-stats">
+            <div><span>About</span><strong id="progress-eta">Getting ready…</strong></div>
+            <div><span>Song processed</span><strong id="progress-processed">0:00</strong></div>
+          </div>
+          <p class="model-note">The first song may take longer while the app gets ready. Later songs start faster.</p>
         </div>
       </section>
 
       <section class="studio" id="studio" hidden>
         <div class="now-playing">
           <div class="cover"><span>S−</span><div class="cover-lines"></div></div>
-          <div class="track-meta"><span id="track-kicker">READY TO AUDITION</span><h2 id="track-name">Track</h2><p id="track-info">44.1 kHz · Stereo · WebGPU</p></div>
-          <button id="new-track" class="quiet-button" type="button">New track</button>
+          <div class="track-meta"><span id="track-kicker">VOCALS ON · MUSIC MUTED</span><h2 id="track-name">Track</h2><p id="track-info">Ready to play</p></div>
+          <button id="new-track" class="quiet-button" type="button">Choose another song</button>
         </div>
 
         <div class="transport">
@@ -60,30 +64,25 @@
           <span id="total-time" class="timecode">0:00</span>
         </div>
 
-        <div class="stem-list" role="radiogroup" aria-label="Audition track">
-          <article class="stem active" data-track="original">
-            <button class="stem-select" type="button" role="radio" aria-checked="true"><span class="stem-index">01</span><span><strong>Original</strong><small>Full mix</small></span></button>
-            <canvas class="stem-wave" data-wave="original"></canvas>
-            <span class="stem-badge">MIX</span>
-          </article>
-          <article class="stem" data-track="vocals">
-            <button class="stem-select" type="button" role="radio" aria-checked="false"><span class="stem-index">02</span><span><strong>Vocals</strong><small>Isolated voice</small></span></button>
+        <div class="stem-list" aria-label="Separated tracks">
+          <article class="stem audible" data-track="vocals">
+            <div class="stem-label"><span class="stem-index">01</span><span><strong>Voice</strong><small>Singing and spoken words</small></span></div>
             <canvas class="stem-wave" data-wave="vocals"></canvas>
-            <button class="download" data-download="vocals" type="button" aria-label="Download vocals">↓</button>
+            <div class="stem-actions"><button class="mute" data-mute="vocals" type="button" aria-pressed="false"><span aria-hidden="true">●</span> On</button><button class="download" data-download="vocals" type="button" aria-label="Download voice track">↓</button></div>
           </article>
           <article class="stem" data-track="instrumental">
-            <button class="stem-select" type="button" role="radio" aria-checked="false"><span class="stem-index">03</span><span><strong>Instrumental</strong><small>Original minus vocals</small></span></button>
+            <div class="stem-label"><span class="stem-index">02</span><span><strong>Music</strong><small>Instruments without the voice</small></span></div>
             <canvas class="stem-wave" data-wave="instrumental"></canvas>
-            <button class="download" data-download="instrumental" type="button" aria-label="Download instrumental">↓</button>
+            <div class="stem-actions"><button class="mute is-muted" data-mute="instrumental" type="button" aria-pressed="true"><span aria-hidden="true">○</span> Muted</button><button class="download" data-download="instrumental" type="button" aria-label="Download music track">↓</button></div>
           </article>
         </div>
-        <p class="subtraction-note">Instrumental is the exact residual: original − vocals. No normalization, no hidden mastering.</p>
+        <p class="subtraction-note">Turn either track on or off to hear exactly what you want.</p>
       </section>
 
-      <section class="error-card" id="error-card" hidden aria-live="assertive"><strong>Couldn’t separate this track</strong><p id="error-message"></p><button id="retry" type="button">Choose another file</button></section>
+      <section class="error-card" id="error-card" hidden aria-live="assertive"><strong>We couldn’t split this song</strong><p id="error-message"></p><button id="retry" type="button">Choose another song</button></section>
     </main>
 
-    <footer><span>Mel-Band RoFormer · WebGPU</span><span>Model by Kimberley Jensen · Runtime work by Musetric &amp; ONNX Runtime</span></footer>
+    <footer><span>Runs privately on your device</span><span>Made possible by Kimberley Jensen, Musetric &amp; ONNX Runtime</span></footer>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

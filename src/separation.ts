@@ -21,6 +21,9 @@ export type SeparationProgress = {
   phase: "model" | "separating" | "finishing";
   fraction: number;
   detail: string;
+  etaSeconds?: number;
+  processedSeconds?: number;
+  totalSeconds?: number;
 };
 
 const reflectPad = (
@@ -94,6 +97,8 @@ export async function separateVocals(
   const counter = new Float32Array(left.length);
   const chunks = Math.ceil(left.length / STEP);
   const estimate = new Float32Array(CHUNK_SAMPLES * 2);
+  const separationStarted = performance.now();
+  const totalSeconds = source.left.length / SAMPLE_RATE;
 
   try {
     let chunkIndex = 0;
@@ -102,7 +107,8 @@ export async function separateVocals(
       onProgress({
         phase: "separating",
         fraction: chunkIndex / chunks,
-        detail: `Separating window ${chunkIndex + 1} of ${chunks}`,
+        detail: chunkIndex === 0 ? "Listening closely and finding the voice…" : "Separating the voice from the music…",
+        totalSeconds,
       });
       await runtime.processChunk({ input: data, output: estimate });
       const first = position === 0;
@@ -115,6 +121,16 @@ export async function separateVocals(
         counter[target] += weight;
       }
       chunkIndex += 1;
+      const elapsedSeconds = (performance.now() - separationStarted) / 1000;
+      const completedFraction = chunkIndex / chunks;
+      onProgress({
+        phase: "separating",
+        fraction: completedFraction,
+        detail: "Separating the voice from the music…",
+        etaSeconds: (elapsedSeconds / chunkIndex) * (chunks - chunkIndex),
+        processedSeconds: totalSeconds * completedFraction,
+        totalSeconds,
+      });
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     }
   } finally {

@@ -21,23 +21,42 @@ const setView = (view: "drop" | "progress" | "studio" | "error") => {
   errorCard.hidden = view !== "error";
 };
 
-const updateProgress = (title: string, detail: string, fraction: number) => {
+const etaLabel = (seconds?: number): string => {
+  if (seconds === undefined || !Number.isFinite(seconds)) return "Getting ready…";
+  if (seconds < 8) return "Less than 10 seconds left";
+  if (seconds < 60) return `${Math.ceil(seconds / 5) * 5} seconds left`;
+  const minutes = Math.ceil(seconds / 60);
+  return `About ${minutes} minute${minutes === 1 ? "" : "s"} left`;
+};
+
+const updateProgress = (
+  title: string,
+  detail: string,
+  fraction: number,
+  etaSeconds?: number,
+  processedSeconds?: number,
+  totalSeconds?: number,
+) => {
   $("#progress-title").textContent = title;
   $("#progress-detail").textContent = detail;
   $("#progress-percent").textContent = `${Math.round(fraction * 100)}%`;
   ($("#progress-fill") as HTMLElement).style.width = `${Math.max(2, fraction * 100)}%`;
+  $("#progress-eta").textContent = etaLabel(etaSeconds);
+  $("#progress-processed").textContent = totalSeconds === undefined
+    ? "Waiting to begin"
+    : `${durationLabel(processedSeconds ?? 0)} of ${durationLabel(totalSeconds)}`;
 };
 
 const updateDevice = async () => {
   const pill = $("#device-pill");
   if (!navigator.gpu) {
     pill.classList.add("unsupported");
-    $("#device-label").textContent = "WebGPU unavailable";
+    $("#device-label").textContent = "This browser is not supported";
     return;
   }
   const adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
   pill.classList.toggle("unsupported", !adapter);
-  $("#device-label").textContent = adapter ? "WebGPU ready" : "No GPU adapter";
+  $("#device-label").textContent = adapter ? "Ready on this device" : "This device is not supported";
 };
 
 const downloadTrack = (id: "vocals" | "instrumental") => {
@@ -53,10 +72,10 @@ const downloadTrack = (id: "vocals" | "instrumental") => {
 
 const drawAll = () => {
   const progress = player.getDuration() ? player.getPosition() / player.getDuration() : 0;
-  const activePeaks = peaks[player.getActive()] ?? peaks.original;
+  const activePeaks = peaks[player.getWaveformTrack()] ?? peaks.vocals;
   if (activePeaks) drawWaveform($("#master-wave") as HTMLCanvasElement, activePeaks, progress, "#f5f2ea");
   const colors: Record<TrackId, string> = { original: "#c9c7c1", vocals: "#ff5c35", instrumental: "#39d4a0" };
-  for (const id of ["original", "vocals", "instrumental"] as TrackId[]) {
+  for (const id of ["vocals", "instrumental"] as TrackId[]) {
     const canvas = document.querySelector(`[data-wave="${id}"]`) as HTMLCanvasElement;
     if (canvas && peaks[id]) drawWaveform(canvas, peaks[id]!, progress, colors[id]);
   }
@@ -65,34 +84,41 @@ const drawAll = () => {
   requestAnimationFrame(drawAll);
 };
 
-const activateTrack = (id: TrackId) => {
-  player.setActive(id);
+const updateMixer = () => {
   document.querySelectorAll<HTMLElement>(".stem").forEach((row) => {
-    const selected = row.dataset.track === id;
-    row.classList.toggle("active", selected);
-    row.querySelector("[role=radio]")?.setAttribute("aria-checked", String(selected));
+    const id = row.dataset.track as TrackId;
+    const muted = player.isMuted(id);
+    const button = row.querySelector<HTMLElement>("[data-mute]");
+    row.classList.toggle("audible", !muted);
+    button?.classList.toggle("is-muted", muted);
+    button?.setAttribute("aria-pressed", String(muted));
+    if (button) button.innerHTML = muted
+      ? '<span aria-hidden="true">○</span> Muted'
+      : '<span aria-hidden="true">●</span> On';
   });
-  $("#track-kicker").textContent = `AUDITIONING ${id.toUpperCase()}`;
+  const vocals = player.isMuted("vocals") ? "VOCALS MUTED" : "VOCALS ON";
+  const music = player.isMuted("instrumental") ? "MUSIC MUTED" : "MUSIC ON";
+  $("#track-kicker").textContent = `${vocals} · ${music}`;
 };
 
 const processFile = async (file: File) => {
   if (!navigator.gpu) {
-    $("#error-message").textContent = "This app requires WebGPU. Open it in a current Chrome or Edge browser on a supported GPU.";
+    $("#error-message").textContent = "Please open this page in a recent version of Chrome or Edge on a newer computer.";
     setView("error");
     return;
   }
   baseName = file.name.replace(/\.[^.]+$/, "") || "track";
   setView("progress");
-  updateProgress("Decoding audio", "Converting to stereo 44.1 kHz without uploading it…", 0.01);
+  updateProgress("Opening your song", "Reading the audio on this device…", 0.01);
   try {
     const original = await decodeAudio(file);
     tracks = { original };
     peaks = { original: waveformPeaks(original) };
-    updateProgress("Loading model", "The first run downloads and caches the WebGPU checkpoint…", 0.03);
-    const separated = await separateVocals(original, ({ phase, fraction, detail }) => {
-      const title = phase === "model" ? "Loading model" : phase === "separating" ? "Separating stems" : "Finishing";
+    updateProgress("Getting ready", "Preparing the song separator. This takes longer the first time…", 0.03);
+    const separated = await separateVocals(original, ({ phase, fraction, detail, etaSeconds, processedSeconds, totalSeconds }) => {
+      const title = phase === "model" ? "Getting ready" : phase === "separating" ? "Splitting your song" : "Almost done";
       const scaled = phase === "model" ? 0.04 : phase === "separating" ? 0.08 + fraction * 0.88 : 0.98;
-      updateProgress(title, detail, scaled);
+      updateProgress(title, detail, scaled, etaSeconds, processedSeconds, totalSeconds);
     });
     tracks = { original, ...separated };
     peaks = {
@@ -101,9 +127,12 @@ const processFile = async (file: File) => {
       instrumental: waveformPeaks(separated.instrumental),
     };
     player.setTracks(tracks);
-    activateTrack("original");
+    player.setMuted("original", true);
+    player.setMuted("vocals", false);
+    player.setMuted("instrumental", true);
+    updateMixer();
     $("#track-name").textContent = baseName;
-    $("#track-info").textContent = `${durationLabel(original.left.length / original.sampleRate)} · 44.1 kHz · Stereo · WebGPU`;
+    $("#track-info").textContent = `${durationLabel(original.left.length / original.sampleRate)} · Two tracks ready to play`;
     $("#total-time").textContent = durationLabel(original.left.length / original.sampleRate);
     setView("studio");
   } catch (error) {
@@ -131,7 +160,11 @@ $("#master-wave").addEventListener("click", (event) => {
   const canvas = event.currentTarget as HTMLCanvasElement;
   player.seek(((event as MouseEvent).offsetX / canvas.clientWidth) * player.getDuration());
 });
-document.querySelectorAll<HTMLElement>(".stem").forEach((row) => row.querySelector(".stem-select")?.addEventListener("click", () => activateTrack(row.dataset.track as TrackId)));
+document.querySelectorAll<HTMLElement>("[data-mute]").forEach((button) => button.addEventListener("click", () => {
+  const id = button.dataset.mute as TrackId;
+  player.setMuted(id, !player.isMuted(id));
+  updateMixer();
+}));
 document.querySelectorAll<HTMLElement>("[data-download]").forEach((button) => button.addEventListener("click", () => downloadTrack(button.dataset.download as "vocals" | "instrumental")));
 for (const selector of ["#new-track", "#retry"]) $(selector).addEventListener("click", () => { player.pause(); fileInput.value = ""; setView("drop"); });
 
