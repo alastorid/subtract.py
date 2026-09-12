@@ -11,7 +11,18 @@
   <body>
     <header class="topbar">
       <a class="brand" href="./" aria-label="Subtract home"><span class="brand-mark">S−</span><span>SUBTRACT</span></a>
-      <div class="device-pill" id="device-pill"><i></i><span id="device-label">Checking this device</span></div>
+      <div class="device-wrap">
+        <div class="device-pill" id="device-pill" tabindex="0" aria-describedby="device-details"><i></i><span id="device-label">Checking WebGPU</span></div>
+        <div class="device-details" id="device-details" role="tooltip">
+          <strong>WebGPU details</strong>
+          <dl>
+            <div><dt>Graphics</dt><dd id="gpu-name">Detecting…</dd></div>
+            <div><dt>Largest buffer</dt><dd id="gpu-buffer">—</dd></div>
+            <div><dt>Storage slots</dt><dd id="gpu-storage">—</dd></div>
+            <div><dt>Workgroup size</dt><dd id="gpu-workgroup">—</dd></div>
+          </dl>
+        </div>
+      </div>
       <a class="github-link" href="https://github.com/alastorid/subtract.py" target="_blank" rel="noreferrer">Source ↗</a>
     </header>
 

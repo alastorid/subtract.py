@@ -51,12 +51,26 @@ const updateDevice = async () => {
   const pill = $("#device-pill");
   if (!navigator.gpu) {
     pill.classList.add("unsupported");
-    $("#device-label").textContent = "This browser is not supported";
+    $("#device-label").textContent = "WebGPU unavailable";
+    $("#gpu-name").textContent = "Not available in this browser";
     return;
   }
   const adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
   pill.classList.toggle("unsupported", !adapter);
-  $("#device-label").textContent = adapter ? "Ready on this device" : "This device is not supported";
+  $("#device-label").textContent = adapter ? "WebGPU ready" : "WebGPU unavailable";
+  if (!adapter) {
+    $("#gpu-name").textContent = "No compatible graphics adapter found";
+    return;
+  }
+  const info = adapter.info;
+  const graphicsName = info.description || info.device || info.architecture || info.vendor || "Available graphics adapter";
+  const bytes = Number(adapter.limits.maxBufferSize);
+  $("#gpu-name").textContent = graphicsName;
+  $("#gpu-buffer").textContent = bytes >= 1024 ** 3
+    ? `${(bytes / 1024 ** 3).toFixed(1)} GB`
+    : `${Math.round(bytes / 1024 ** 2)} MB`;
+  $("#gpu-storage").textContent = String(adapter.limits.maxStorageBuffersPerShaderStage);
+  $("#gpu-workgroup").textContent = `${adapter.limits.maxComputeWorkgroupSizeX} × ${adapter.limits.maxComputeWorkgroupSizeY}`;
 };
 
 const downloadTrack = (id: "vocals" | "instrumental") => {
