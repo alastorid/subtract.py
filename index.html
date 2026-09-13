@@ -46,75 +46,76 @@
         <div class="privacy-note"><span>⌁</span> Your song never leaves this device</div>
       </section>
 
-      <section class="queue-panel" id="queue-panel" hidden aria-live="polite">
-        <div class="section-heading"><div><p class="eyebrow">PROCESSING QUEUE</p><h2>Songs in line</h2></div><span id="queue-count">0 waiting</span></div>
-        <div class="queue-list" id="queue-list"></div>
-      </section>
+      <section class="workbench" id="workbench" hidden>
+        <aside class="song-sidebar" id="song-sidebar" hidden>
+          <div class="song-sidebar-head"><div><p class="eyebrow">YOUR LIBRARY</p><h2>Songs</h2></div><button id="add-song" type="button" aria-label="Add songs">＋</button></div>
+          <p class="song-storage" id="song-storage">Checking storage…</p>
+          <div class="song-list" id="song-list"></div>
+          <div class="song-list-empty" id="song-list-empty"><span>♬</span><strong>Drop songs anywhere</strong><small>Your queue and finished songs will live here.</small></div>
+          <div class="song-sidebar-foot"><span id="song-count">0 songs</span><button id="clear-history" type="button" hidden>Delete finished</button></div>
+        </aside>
 
-      <section class="progress-card" id="progress-card" hidden aria-live="polite">
-        <div class="record-disc"><div></div></div>
-        <div class="progress-copy">
-          <span class="processing-name" id="processing-name">Song</span>
-          <div class="progress-heading"><strong id="progress-title">Preparing</strong><span id="progress-percent">0%</span></div>
-          <p id="progress-detail">Opening your song…</p>
-          <div class="progress-track"><div id="progress-fill"></div></div>
-          <div class="progress-stats">
-            <div><span>Estimated time</span><strong id="progress-eta">Calculating…</strong></div>
-            <div><span>Song processed</span><strong id="progress-processed">0:00</strong></div>
-          </div>
-          <p class="model-note">The first song may take longer while the app gets ready. Later songs start faster.</p>
-        </div>
-        <div class="live-results" id="live-results">
-          <div class="live-heading"><strong>Your tracks are taking shape</strong><span>Finished sections appear as they’re ready</span></div>
-          <div class="live-wave-row"><span>Voice</span><canvas id="live-vocals-wave" aria-label="Voice waveform being created"></canvas></div>
-          <div class="live-wave-row"><span>Music</span><canvas id="live-instrumental-wave" aria-label="Music waveform being created"></canvas></div>
-        </div>
-      </section>
+        <div class="workspace-content">
+          <section class="workspace-placeholder" id="workspace-placeholder" hidden>
+            <span>⌁</span><h2 id="workspace-placeholder-title">Choose a song</h2><p id="workspace-placeholder-copy">Select a song from the list, or drop a new one anywhere on this page.</p>
+          </section>
 
-      <section class="studio" id="studio" hidden>
-        <div class="now-playing">
-          <div class="cover"><span>S−</span><div class="cover-lines"></div></div>
-          <div class="track-meta"><span id="track-kicker">READY TO LISTEN</span><h2 id="track-name">Track</h2><p id="track-info">Ready to play</p></div>
-          <button id="new-track" class="quiet-button" type="button">Choose another song</button>
-        </div>
+          <section class="progress-card" id="progress-card" hidden aria-live="polite">
+            <div class="record-disc"><div></div></div>
+            <div class="progress-copy">
+              <span class="processing-name" id="processing-name">Song</span>
+              <div class="progress-heading"><strong id="progress-title">Preparing</strong><span id="progress-percent">0%</span></div>
+              <p id="progress-detail">Opening your song…</p>
+              <div class="progress-track"><div id="progress-fill"></div></div>
+              <div class="progress-stats">
+                <div><span>Estimated time</span><strong id="progress-eta">Calculating…</strong></div>
+                <div><span>Song processed</span><strong id="progress-processed">0:00</strong></div>
+              </div>
+              <p class="model-note">The first song may take longer while the app gets ready. Later songs start faster.</p>
+            </div>
+            <div class="live-results" id="live-results">
+              <div class="live-heading"><strong>Your tracks are taking shape</strong><span>Finished sections appear as they’re ready</span></div>
+              <div class="live-wave-row"><span>Voice</span><canvas id="live-vocals-wave" aria-label="Voice waveform being created"></canvas></div>
+              <div class="live-wave-row"><span>Music</span><canvas id="live-instrumental-wave" aria-label="Music waveform being created"></canvas></div>
+            </div>
+          </section>
 
-        <div class="transport">
-          <button id="rewind" class="transport-secondary" type="button" aria-label="Back 10 seconds">−10</button>
-          <button id="play" class="play-button" type="button" aria-label="Play"><span id="play-icon">▶</span></button>
-          <button id="forward" class="transport-secondary" type="button" aria-label="Forward 10 seconds">+10</button>
-          <span id="current-time" class="timecode">0:00</span>
-          <div class="master-wave"><canvas id="master-wave" aria-label="Song waveform"></canvas><div id="playhead"></div></div>
-          <span id="total-time" class="timecode">0:00</span>
-        </div>
+          <section class="studio" id="studio" hidden>
+            <div class="now-playing">
+              <div class="cover"><span>S−</span><div class="cover-lines"></div></div>
+              <div class="track-meta"><span id="track-kicker">READY TO LISTEN</span><h2 id="track-name">Track</h2><p id="track-info">Ready to play</p></div>
+              <button id="new-track" class="quiet-button" type="button">Choose another song</button>
+            </div>
 
-        <div class="stem-list" role="radiogroup" aria-label="Choose what to hear">
-          <article class="stem" data-track="original">
-            <button class="stem-select" type="button" role="radio" aria-checked="false"><span class="stem-index">01</span><span><strong>Original</strong><small>Voice and music together</small></span></button>
-            <canvas class="stem-wave" data-wave="original"></canvas>
-            <span class="stem-badge">MIX</span>
-          </article>
-          <article class="stem active" data-track="vocals">
-            <button class="stem-select" type="button" role="radio" aria-checked="true"><span class="stem-index">02</span><span><strong>Voice</strong><small>Singing and spoken words</small></span></button>
-            <canvas class="stem-wave" data-wave="vocals"></canvas>
-            <button class="download" data-download="vocals" type="button" aria-label="Download voice track">↓</button>
-          </article>
-          <article class="stem" data-track="instrumental">
-            <button class="stem-select" type="button" role="radio" aria-checked="false"><span class="stem-index">03</span><span><strong>Music</strong><small>Instruments without the voice</small></span></button>
-            <canvas class="stem-wave" data-wave="instrumental"></canvas>
-            <button class="download" data-download="instrumental" type="button" aria-label="Download music track">↓</button>
-          </article>
-        </div>
-        <p class="subtraction-note">Choose a row to hear that version.</p>
-      </section>
+            <div class="transport">
+              <button id="rewind" class="transport-secondary" type="button" aria-label="Back 10 seconds">−10</button>
+              <button id="play" class="play-button" type="button" aria-label="Play"><span id="play-icon">▶</span></button>
+              <button id="forward" class="transport-secondary" type="button" aria-label="Forward 10 seconds">+10</button>
+              <span id="current-time" class="timecode">0:00</span>
+              <div class="master-wave"><canvas id="master-wave" aria-label="Song waveform"></canvas><div id="playhead"></div></div>
+              <span id="total-time" class="timecode">0:00</span>
+            </div>
 
-      <section class="history-panel" id="history-panel" hidden>
-        <div class="history-header">
-          <div><p class="eyebrow">ON THIS DEVICE</p><h2>Listening history</h2><p id="history-storage">Checking storage…</p></div>
-          <label class="history-switch"><span><strong>Save history</strong><small id="history-mode">New results are saved on this device</small></span><input id="history-toggle" type="checkbox" checked /><i aria-hidden="true"></i></label>
+            <div class="stem-list" role="radiogroup" aria-label="Choose what to hear">
+              <article class="stem" data-track="original">
+                <button class="stem-select" type="button" role="radio" aria-checked="false"><span class="stem-index">01</span><span><strong>Original</strong><small>Voice and music together</small></span></button>
+                <canvas class="stem-wave" data-wave="original"></canvas>
+                <span class="stem-badge">MIX</span>
+              </article>
+              <article class="stem active" data-track="vocals">
+                <button class="stem-select" type="button" role="radio" aria-checked="true"><span class="stem-index">02</span><span><strong>Voice</strong><small>Singing and spoken words</small></span></button>
+                <canvas class="stem-wave" data-wave="vocals"></canvas>
+                <button class="download" data-download="vocals" type="button" aria-label="Download voice track">↓</button>
+              </article>
+              <article class="stem" data-track="instrumental">
+                <button class="stem-select" type="button" role="radio" aria-checked="false"><span class="stem-index">03</span><span><strong>Music</strong><small>Instruments without the voice</small></span></button>
+                <canvas class="stem-wave" data-wave="instrumental"></canvas>
+                <button class="download" data-download="instrumental" type="button" aria-label="Download music track">↓</button>
+              </article>
+            </div>
+            <p class="subtraction-note">Choose a row to hear that version.</p>
+          </section>
         </div>
-        <div class="history-toolbar"><span id="history-count">0 results</span><span id="history-message" role="status"></span><button id="clear-history" type="button" hidden>Delete all</button></div>
-        <div class="history-list" id="history-list"></div>
-        <div class="history-empty" id="history-empty"><span>♬</span><strong>No saved songs yet</strong><p>Finished songs will appear here so you can return to them later.</p></div>
       </section>
 
       <section class="error-card" id="error-card" hidden aria-live="assertive"><strong>We couldn’t split this song</strong><p id="error-message"></p><button id="retry" type="button">Choose another song</button></section>

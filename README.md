@@ -133,10 +133,12 @@ See [WEBGPU.md](WEBGPU.md) for architecture, hashes, and reproducible export
 instructions.
 
 The browser opens in a clean single-song mode. Clicking *hidden.* in the title
-toggles the full workspace, where multiple dropped songs enter a sequential queue
-while the current result remains playable. The selected mode survives reloads.
-Finished voice and music WAVs are stored in IndexedDB by default, so workspace
-history survives reloads. History saving can be disabled persistently from the
-workspace; results made while it is off remain only for the current browser
-session. The history panel reports both stem size and the browser origin's
-estimated storage usage.
+toggles the full workspace. Its left-hand song list combines the processing queue
+and listening history: queued and processing songs show their state, while
+finished songs simply remain ready to play. Select any song to see its live
+progress or open its waveform player while later songs continue in the
+background. The selected mode survives reloads.
+
+Finished voice and music WAVs are stored in IndexedDB, so the workspace survives
+reloads. The song list reports saved stem size and the browser origin's estimated
+storage usage.

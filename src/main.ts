@@ -26,12 +26,12 @@ const $ = <T extends HTMLElement>(selector: string): T => document.querySelector
 const fileInput = $("#file-input") as HTMLInputElement;
 const dropCard = $("#drop-card");
 const dropOverlay = $("#drop-overlay");
-const queuePanel = $("#queue-panel");
+const workbench = $("#workbench");
+const songSidebar = $("#song-sidebar");
+const workspacePlaceholder = $("#workspace-placeholder");
 const progressCard = $("#progress-card");
 const studio = $("#studio");
 const errorCard = $("#error-card");
-const historyPanel = $("#history-panel");
-const historyToggle = $("#history-toggle") as HTMLInputElement;
 const player = new StemPlayer();
 
 let tracks: Partial<Record<TrackId, StereoAudio>> = {};
@@ -48,8 +48,9 @@ let queueRunning = false;
 let persistentHistory: HistorySummary[] = [];
 const sessionHistory = new Map<string, HistoryRecord>();
 let historyLoadToken = 0;
-let historyEnabled = localStorage.getItem("subtract-history-enabled") !== "false";
 let workspaceMode = localStorage.getItem("subtract-workspace-mode") === "true";
+let selectedSongId: string | undefined;
+let activeProgress = 0;
 
 const formatBytes = (bytes: number): string => {
   if (bytes === 0) return "0 B";
@@ -62,11 +63,27 @@ const displayName = (name: string): string => name.replace(/\.[^.]+$/, "") || "t
 
 const refreshLayout = () => {
   const busy = Boolean(activeJob) || queue.length > 0;
-  dropCard.hidden = hasPlayback || busy;
-  queuePanel.hidden = !workspaceMode || !busy;
-  progressCard.hidden = !activeJob;
-  studio.hidden = !hasPlayback;
-  historyPanel.hidden = !workspaceMode;
+  dropCard.hidden = workspaceMode || hasPlayback || busy;
+  workbench.hidden = !workspaceMode && !hasPlayback && !busy;
+  songSidebar.hidden = !workspaceMode;
+
+  if (!workspaceMode) {
+    progressCard.hidden = !activeJob;
+    studio.hidden = !hasPlayback;
+    workspacePlaceholder.hidden = true;
+    return;
+  }
+
+  const showingProgress = Boolean(activeJob && selectedSongId === activeJob.id);
+  const showingPlayer = Boolean(!showingProgress && hasPlayback && selectedSongId === currentResultId);
+  progressCard.hidden = !showingProgress;
+  studio.hidden = !showingPlayer;
+  workspacePlaceholder.hidden = showingProgress || showingPlayer;
+};
+
+const setPlaceholder = (title: string, copy: string) => {
+  $("#workspace-placeholder-title").textContent = title;
+  $("#workspace-placeholder-copy").textContent = copy;
 };
 
 const showError = (message: string) => {
@@ -100,6 +117,9 @@ const updateProgress = (
   if (totalSeconds !== undefined) {
     $("#progress-processed").textContent = `${durationLabel(processedSeconds ?? 0)} of ${durationLabel(totalSeconds)}`;
   }
+  activeProgress = fraction;
+  const miniFill = activeJob ? document.querySelector<HTMLElement>(`[data-song-id="${activeJob.id}"] .song-mini-fill`) : null;
+  if (miniFill) miniFill.style.width = `${Math.max(2, fraction * 100)}%`;
 };
 
 const updateDevice = async () => {
@@ -175,6 +195,7 @@ const showTracks = (name: string, audio: AudioTracks, resultId: string) => {
   };
   baseName = displayName(name);
   currentResultId = resultId;
+  selectedSongId = resultId;
   player.setTracks(tracks);
   activateTrack("vocals");
   $("#track-name").textContent = baseName;
@@ -182,7 +203,7 @@ const showTracks = (name: string, audio: AudioTracks, resultId: string) => {
   $("#total-time").textContent = durationLabel(audio.original.left.length / audio.original.sampleRate);
   hasPlayback = true;
   refreshLayout();
-  renderHistory();
+  renderSongList();
 };
 
 const reconstructOriginal = (vocals: StereoAudio, instrumental: StereoAudio): StereoAudio => {
@@ -196,10 +217,11 @@ const reconstructOriginal = (vocals: StereoAudio, instrumental: StereoAudio): St
   return { left, right, sampleRate: vocals.sampleRate };
 };
 
-const historyItems = (): Array<HistorySummary & { saved: boolean }> => {
+const completedItems = (): Array<HistorySummary & { saved: boolean }> => {
+  const unfinishedIds = new Set([activeJob?.id, ...queue.map((job) => job.id)].filter(Boolean));
   const saved = persistentHistory.map((item) => ({ ...item, saved: true }));
   const session = [...sessionHistory.values()].map(({ vocals: _v, instrumental: _i, ...item }) => ({ ...item, saved: false }));
-  return [...saved, ...session].sort((a, b) => b.createdAt - a.createdAt);
+  return [...saved, ...session].filter((item) => !unfinishedIds.has(item.id)).sort((a, b) => b.createdAt - a.createdAt);
 };
 
 const updateStorageSummary = async () => {
@@ -207,16 +229,18 @@ const updateStorageSummary = async () => {
   try {
     const estimate = await navigator.storage.estimate();
     if (estimate.usage !== undefined && estimate.quota !== undefined) {
-      $("#history-storage").textContent = `History ${formatBytes(savedBytes)} · This site ${formatBytes(estimate.usage)} of ${formatBytes(estimate.quota)}`;
+      $("#song-storage").textContent = `Saved ${formatBytes(savedBytes)} · Site ${formatBytes(estimate.usage)} of ${formatBytes(estimate.quota)}`;
       return;
     }
   } catch { /* storage estimate is optional */ }
-  $("#history-storage").textContent = `History uses ${formatBytes(savedBytes)}`;
+  $("#song-storage").textContent = `Saved songs use ${formatBytes(savedBytes)}`;
 };
 
 const loadHistoryItem = async (id: string) => {
   const token = ++historyLoadToken;
-  $("#history-message").textContent = "Opening your saved tracks…";
+  selectedSongId = id;
+  setPlaceholder("Opening this song", "Loading its voice and music tracks from this device…");
+  renderSongList();
   try {
     const record = sessionHistory.get(id) ?? await getHistoryRecord(id);
     if (!record || token !== historyLoadToken) return;
@@ -224,89 +248,138 @@ const loadHistoryItem = async (id: string) => {
     if (token !== historyLoadToken) return;
     const original = reconstructOriginal(vocals, instrumental);
     showTracks(record.name, { original, vocals, instrumental }, record.id);
-    $("#history-message").textContent = "";
-    studio.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (error) {
     showError(error instanceof Error ? error.message : String(error));
-    $("#history-message").textContent = "This result could not be opened.";
+    setPlaceholder("This song could not be opened", "You can delete it from the list and choose another song.");
   }
 };
 
 const removeHistoryItem = async (id: string, saved: boolean) => {
   if (saved) await deleteHistoryRecord(id);
   else sessionHistory.delete(id);
-  if (currentResultId === id) currentResultId = undefined;
+  if (currentResultId === id) {
+    currentResultId = undefined;
+    hasPlayback = false;
+    player.pause();
+  }
+  if (selectedSongId === id) selectedSongId = undefined;
   await refreshHistory();
 };
 
-function renderHistory(): void {
-  const list = $("#history-list");
-  const items = historyItems();
-  list.replaceChildren();
-  $("#history-empty").hidden = items.length > 0;
-  $("#clear-history").hidden = items.length === 0;
-  $("#history-count").textContent = `${items.length} result${items.length === 1 ? "" : "s"}`;
+const selectSong = (id: string) => {
+  historyLoadToken += 1;
+  selectedSongId = id;
+  if (activeJob?.id === id) {
+    refreshLayout();
+    renderSongList();
+    return;
+  }
+  const waiting = queue.find((job) => job.id === id);
+  if (waiting) {
+    setPlaceholder("Waiting in queue", `${displayName(waiting.name)} will begin automatically.`);
+    refreshLayout();
+    renderSongList();
+    return;
+  }
+  if (currentResultId === id && hasPlayback) {
+    refreshLayout();
+    renderSongList();
+    return;
+  }
+  void loadHistoryItem(id);
+};
 
-  for (const item of items) {
+function renderSongList(): void {
+  const list = $("#song-list");
+  const finished = completedItems();
+  const jobs = activeJob ? [activeJob, ...queue] : queue;
+  const total = jobs.length + finished.length;
+  list.replaceChildren();
+  $("#song-list-empty").hidden = total > 0;
+  $("#clear-history").hidden = finished.length === 0;
+  $("#song-count").textContent = `${total} song${total === 1 ? "" : "s"}`;
+
+  for (const job of jobs) {
     const article = document.createElement("article");
-    article.className = `history-item${item.id === currentResultId ? " current" : ""}`;
+    article.className = `song-item${job.id === selectedSongId ? " selected" : ""}`;
+    article.dataset.songId = job.id;
 
     const open = document.createElement("button");
-    open.className = "history-open";
+    open.className = "song-open";
     open.type = "button";
-    open.addEventListener("click", () => void loadHistoryItem(item.id));
+    open.addEventListener("click", () => selectSong(job.id));
+    const title = document.createElement("strong");
+    title.textContent = displayName(job.name);
+    open.append(title);
+
+    const state = document.createElement("span");
+    state.className = `song-state ${job === activeJob ? "processing" : "queued"}`;
+    state.textContent = job === activeJob ? "processing" : "queue";
+
+    if (job === activeJob) {
+      const miniTrack = document.createElement("div");
+      miniTrack.className = "song-mini-track";
+      const miniFill = document.createElement("i");
+      miniFill.className = "song-mini-fill";
+      miniFill.style.width = `${Math.max(2, activeProgress * 100)}%`;
+      miniTrack.append(miniFill);
+      open.append(miniTrack);
+    }
+
+    article.append(open, state);
+    if (job !== activeJob) {
+      const remove = document.createElement("button");
+      remove.className = "song-delete";
+      remove.type = "button";
+      remove.textContent = "×";
+      remove.setAttribute("aria-label", `Remove ${displayName(job.name)} from queue`);
+      remove.addEventListener("click", () => {
+        queue = queue.filter((queued) => queued.id !== job.id);
+        if (selectedSongId === job.id) selectedSongId = activeJob?.id ?? currentResultId ?? completedItems()[0]?.id;
+        renderSongList();
+      });
+      article.append(remove);
+    }
+    list.append(article);
+  }
+
+  for (const item of finished) {
+    const article = document.createElement("article");
+    article.className = `song-item${item.id === selectedSongId ? " selected" : ""}`;
+    article.dataset.songId = item.id;
+
+    const open = document.createElement("button");
+    open.className = "song-open";
+    open.type = "button";
+    open.addEventListener("click", () => selectSong(item.id));
     const title = document.createElement("strong");
     title.textContent = displayName(item.name);
     const meta = document.createElement("span");
-    const date = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(item.createdAt);
-    meta.textContent = `${durationLabel(item.duration)} · ${date}`;
+    meta.textContent = `${durationLabel(item.duration)} · ${formatBytes(item.bytes)}`;
     open.append(title, meta);
 
-    const size = document.createElement("span");
-    size.className = "history-size";
-    size.textContent = `${item.saved ? "Saved" : "This session"} · ${formatBytes(item.bytes)}`;
-
     const remove = document.createElement("button");
-    remove.className = "history-delete";
+    remove.className = "song-delete";
     remove.type = "button";
     remove.textContent = "×";
-    remove.title = "Delete this result";
     remove.setAttribute("aria-label", `Delete ${displayName(item.name)}`);
     remove.addEventListener("click", () => void removeHistoryItem(item.id, item.saved));
-    article.append(open, size, remove);
+    article.append(open, remove);
     list.append(article);
   }
+  refreshLayout();
 }
 
 const refreshHistory = async () => {
   try {
     persistentHistory = await listHistoryRecords();
-    renderHistory();
+    if (!selectedSongId) selectedSongId = activeJob?.id ?? queue[0]?.id ?? currentResultId ?? completedItems()[0]?.id;
+    renderSongList();
     await updateStorageSummary();
   } catch (error) {
     console.error(error);
-    $("#history-message").textContent = "Saved history is unavailable in this browser.";
+    setPlaceholder("Saved songs are unavailable", "This browser could not open its local song library.");
   }
-};
-
-const renderQueue = () => {
-  const jobs = activeJob ? [activeJob, ...queue] : queue;
-  $("#queue-count").textContent = activeJob ? `${queue.length} waiting` : `${queue.length} waiting to start`;
-  const list = $("#queue-list");
-  list.replaceChildren();
-  jobs.forEach((job, index) => {
-    const row = document.createElement("div");
-    row.className = `queue-item${job === activeJob ? " active" : ""}`;
-    const number = document.createElement("span");
-    number.textContent = String(index + 1).padStart(2, "0");
-    const name = document.createElement("strong");
-    name.textContent = displayName(job.name);
-    const status = document.createElement("small");
-    status.textContent = job === activeJob ? "Processing now" : "Waiting";
-    row.append(number, name, status);
-    list.append(row);
-  });
-  refreshLayout();
 };
 
 const processJob = async (job: QueueJob) => {
@@ -329,8 +402,9 @@ const processJob = async (job: QueueJob) => {
     liveCompletion = endSample / original.left.length;
   });
 
-  const resultId = crypto.randomUUID();
-  if (!hasPlayback || !job.workspace) showTracks(job.name, { original, ...separated }, resultId);
+  const resultId = job.id;
+  const shouldShowResult = !job.workspace || selectedSongId === job.id;
+  if (shouldShowResult) showTracks(job.name, { original, ...separated }, resultId);
 
   // Clean mode is deliberately a one-song, one-result experience. The richer
   // workspace owns queueing and persistent history.
@@ -348,16 +422,12 @@ const processJob = async (job: QueueJob) => {
     instrumental,
   };
 
-  if (historyEnabled) {
-    try {
-      await saveHistoryRecord(record);
-    } catch (error) {
-      console.error(error);
-      sessionHistory.set(record.id, record);
-      $("#history-message").textContent = "Storage is full, so the newest result will last only for this session.";
-    }
-  } else {
+  try {
+    await saveHistoryRecord(record);
+  } catch (error) {
+    console.error(error);
     sessionHistory.set(record.id, record);
+    showError("This browser could not save the newest song permanently. It will remain available until this tab is closed.");
   }
   await refreshHistory();
 };
@@ -368,15 +438,19 @@ const runQueue = async () => {
   hideError();
   while (queue.length) {
     activeJob = queue.shift()!;
-    renderQueue();
+    activeProgress = 0;
+    if (!selectedSongId) selectedSongId = activeJob.id;
+    renderSongList();
     try {
       await processJob(activeJob);
     } catch (error) {
       console.error(error);
       showError(`${displayName(activeJob.name)}: ${error instanceof Error ? error.message : String(error)}`);
+      if (selectedSongId === activeJob.id) selectedSongId = queue[0]?.id ?? currentResultId ?? completedItems()[0]?.id;
     }
     activeJob = undefined;
-    renderQueue();
+    activeProgress = 0;
+    renderSongList();
   }
   queueRunning = false;
   refreshLayout();
@@ -400,13 +474,15 @@ const enqueueFiles = (files: Iterable<File>) => {
     hasPlayback = false;
     currentResultId = undefined;
   }
-  queue.push(...additions.map((file) => ({
+  const jobs = additions.map((file) => ({
     id: crypto.randomUUID(),
     file,
     name: file.name,
     workspace: workspaceMode,
-  })));
-  renderQueue();
+  }));
+  queue.push(...jobs);
+  if (!selectedSongId) selectedSongId = jobs[0]?.id;
+  renderSongList();
   void runQueue();
 };
 
@@ -417,7 +493,7 @@ const setWorkspaceMode = (enabled: boolean) => {
   fileInput.multiple = enabled;
   refreshLayout();
   if (enabled) {
-    if (historyEnabled) void navigator.storage.persist?.();
+    void navigator.storage.persist?.();
     void refreshHistory();
   }
 };
@@ -431,21 +507,19 @@ $("#mode-switch").addEventListener("click", () => {
   setWorkspaceMode(!workspaceMode);
 });
 
-historyToggle.checked = historyEnabled;
-$("#history-mode").textContent = historyEnabled ? "New results are saved on this device" : "New results last for this session only";
-historyToggle.addEventListener("change", () => {
-  historyEnabled = historyToggle.checked;
-  localStorage.setItem("subtract-history-enabled", String(historyEnabled));
-  $("#history-mode").textContent = historyEnabled ? "New results are saved on this device" : "New results last for this session only";
-  if (historyEnabled) void navigator.storage.persist?.();
-});
-
 $("#clear-history").addEventListener("click", () => {
   if (!window.confirm("Delete every result from history?")) return;
   void (async () => {
+    historyLoadToken += 1;
+    const finishedIds = new Set(completedItems().map((item) => item.id));
     await clearHistoryRecords();
     sessionHistory.clear();
-    currentResultId = undefined;
+    if (currentResultId && finishedIds.has(currentResultId)) {
+      currentResultId = undefined;
+      hasPlayback = false;
+      player.pause();
+    }
+    if (selectedSongId && finishedIds.has(selectedSongId)) selectedSongId = activeJob?.id ?? queue[0]?.id;
     await refreshHistory();
   })();
 });
@@ -454,7 +528,7 @@ fileInput.addEventListener("change", () => {
   if (fileInput.files) enqueueFiles(fileInput.files);
   fileInput.value = "";
 });
-for (const selector of ["#drop-target", "#new-track", "#retry"]) {
+for (const selector of ["#drop-target", "#new-track", "#retry", "#add-song"]) {
   $(selector).addEventListener("click", () => fileInput.click());
 }
 
