@@ -51,6 +51,7 @@ let historyLoadToken = 0;
 let workspaceMode = localStorage.getItem("subtract-workspace-mode") === "true";
 let selectedSongId: string | undefined;
 let activeProgress = 0;
+let noticeTimer: number | undefined;
 
 const formatBytes = (bytes: number): string => {
   if (bytes === 0) return "0 B";
@@ -86,12 +87,21 @@ const setPlaceholder = (title: string, copy: string) => {
   $("#workspace-placeholder-copy").textContent = copy;
 };
 
-const showError = (message: string) => {
-  $("#error-message").textContent = message;
-  errorCard.hidden = false;
+const hideError = () => {
+  if (noticeTimer !== undefined) window.clearTimeout(noticeTimer);
+  noticeTimer = undefined;
+  errorCard.hidden = true;
 };
 
-const hideError = () => { errorCard.hidden = true; };
+const showError = (message: string, title = "We couldn’t split this song", temporary = false) => {
+  if (noticeTimer !== undefined) window.clearTimeout(noticeTimer);
+  $("#error-title").textContent = title;
+  $("#error-message").textContent = message;
+  $("#retry").hidden = temporary;
+  errorCard.classList.toggle("notice", temporary);
+  errorCard.hidden = false;
+  noticeTimer = temporary ? window.setTimeout(hideError, 5_000) : undefined;
+};
 
 const etaLabel = (seconds?: number): string => {
   if (seconds === undefined || !Number.isFinite(seconds)) return "Calculating…";
@@ -500,7 +510,11 @@ const setWorkspaceMode = (enabled: boolean) => {
 
 $("#mode-switch").addEventListener("click", () => {
   if (workspaceMode && (activeJob || queue.length)) {
-    showError("Let the processing queue finish before returning to single-song mode.");
+    showError(
+      "Your songs are still being processed. You can keep listening here, then return to simple mode when the queue is finished.",
+      "The workspace is still busy",
+      true,
+    );
     return;
   }
   hideError();
