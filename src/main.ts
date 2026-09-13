@@ -93,14 +93,13 @@ const hideError = () => {
   errorCard.hidden = true;
 };
 
-const showError = (message: string, title = "We couldn’t split this song", temporary = false) => {
+const showError = (message: string, title = "This song didn’t finish", notice = false) => {
   if (noticeTimer !== undefined) window.clearTimeout(noticeTimer);
   $("#error-title").textContent = title;
   $("#error-message").textContent = message;
-  $("#retry").hidden = temporary;
-  errorCard.classList.toggle("notice", temporary);
+  errorCard.classList.toggle("notice", notice);
   errorCard.hidden = false;
-  noticeTimer = temporary ? window.setTimeout(hideError, 5_000) : undefined;
+  noticeTimer = window.setTimeout(hideError, notice ? 5_000 : 8_000);
 };
 
 const etaLabel = (seconds?: number): string => {
@@ -542,7 +541,7 @@ fileInput.addEventListener("change", () => {
   if (fileInput.files) enqueueFiles(fileInput.files);
   fileInput.value = "";
 });
-for (const selector of ["#drop-target", "#new-track", "#retry", "#add-song"]) {
+for (const selector of ["#drop-target", "#new-track", "#add-song"]) {
   $(selector).addEventListener("click", () => fileInput.click());
 }
 
