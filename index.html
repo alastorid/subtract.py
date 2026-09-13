@@ -9,6 +9,7 @@
     <title>Subtract — WebGPU Stem Studio</title>
   </head>
   <body>
+    <div class="drop-overlay" id="drop-overlay" hidden><span>＋</span><strong>Add to processing queue</strong><small>Drop one or more songs</small></div>
     <header class="topbar">
       <a class="brand" href="./" aria-label="Subtract home"><span class="brand-mark">S−</span><span>SUBTRACT</span></a>
       <div class="device-wrap">
@@ -36,7 +37,7 @@
       </section>
 
       <section class="drop-card" id="drop-card">
-        <input id="file-input" type="file" accept="audio/*,.wav,.flac,.mp3,.m4a" hidden />
+        <input id="file-input" type="file" accept="audio/*,.wav,.flac,.mp3,.m4a" multiple hidden />
         <button class="drop-target" id="drop-target" type="button">
           <span class="upload-glyph" aria-hidden="true">↥</span>
           <span class="drop-title">Drop a song here</span>
@@ -45,9 +46,15 @@
         <div class="privacy-note"><span>⌁</span> Your song never leaves this device</div>
       </section>
 
+      <section class="queue-panel" id="queue-panel" hidden aria-live="polite">
+        <div class="section-heading"><div><p class="eyebrow">PROCESSING QUEUE</p><h2>Songs in line</h2></div><span id="queue-count">0 waiting</span></div>
+        <div class="queue-list" id="queue-list"></div>
+      </section>
+
       <section class="progress-card" id="progress-card" hidden aria-live="polite">
         <div class="record-disc"><div></div></div>
         <div class="progress-copy">
+          <span class="processing-name" id="processing-name">Song</span>
           <div class="progress-heading"><strong id="progress-title">Preparing</strong><span id="progress-percent">0%</span></div>
           <p id="progress-detail">Opening your song…</p>
           <div class="progress-track"><div id="progress-fill"></div></div>
@@ -98,6 +105,16 @@
           </article>
         </div>
         <p class="subtraction-note">Choose a row to hear that version.</p>
+      </section>
+
+      <section class="history-panel" id="history-panel">
+        <div class="history-header">
+          <div><p class="eyebrow">ON THIS DEVICE</p><h2>Listening history</h2><p id="history-storage">Checking storage…</p></div>
+          <label class="history-switch"><span><strong>Save history</strong><small id="history-mode">New results are saved on this device</small></span><input id="history-toggle" type="checkbox" checked /><i aria-hidden="true"></i></label>
+        </div>
+        <div class="history-toolbar"><span id="history-count">0 results</span><span id="history-message" role="status"></span><button id="clear-history" type="button" hidden>Delete all</button></div>
+        <div class="history-list" id="history-list"></div>
+        <div class="history-empty" id="history-empty"><span>♬</span><strong>No saved songs yet</strong><p>Finished songs will appear here so you can return to them later.</p></div>
       </section>
 
       <section class="error-card" id="error-card" hidden aria-live="assertive"><strong>We couldn’t split this song</strong><p id="error-message"></p><button id="retry" type="button">Choose another song</button></section>

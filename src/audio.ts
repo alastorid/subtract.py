@@ -1,7 +1,7 @@
 import type { StereoAudio } from "./separation";
 import { SAMPLE_RATE } from "./separation";
 
-export async function decodeAudio(file: File): Promise<StereoAudio> {
+export async function decodeAudio(file: Blob): Promise<StereoAudio> {
   const context = new AudioContext();
   try {
     const decoded = await context.decodeAudioData(await file.arrayBuffer());
