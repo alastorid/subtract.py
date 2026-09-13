@@ -49,7 +49,7 @@ let persistentHistory: HistorySummary[] = [];
 const sessionHistory = new Map<string, HistoryRecord>();
 let historyLoadToken = 0;
 let historyEnabled = localStorage.getItem("subtract-history-enabled") !== "false";
-let workspaceMode = false;
+let workspaceMode = localStorage.getItem("subtract-workspace-mode") === "true";
 
 const formatBytes = (bytes: number): string => {
   if (bytes === 0) return "0 B";
@@ -412,6 +412,7 @@ const enqueueFiles = (files: Iterable<File>) => {
 
 const setWorkspaceMode = (enabled: boolean) => {
   workspaceMode = enabled;
+  localStorage.setItem("subtract-workspace-mode", String(enabled));
   document.body.classList.toggle("workspace-mode", enabled);
   fileInput.multiple = enabled;
   refreshLayout();
@@ -421,7 +422,7 @@ const setWorkspaceMode = (enabled: boolean) => {
   }
 };
 
-$("#mode-switch").addEventListener("dblclick", () => {
+$("#mode-switch").addEventListener("click", () => {
   if (workspaceMode && (activeJob || queue.length)) {
     showError("Let the processing queue finish before returning to single-song mode.");
     return;
@@ -492,5 +493,5 @@ document.querySelectorAll<HTMLElement>("[data-download]").forEach((button) => bu
 
 if ("serviceWorker" in navigator) void navigator.serviceWorker.register("./sw.js");
 void updateDevice();
-setWorkspaceMode(false);
+setWorkspaceMode(workspaceMode);
 requestAnimationFrame(drawAll);
