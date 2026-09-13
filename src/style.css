@@ -127,6 +127,7 @@ code { color: #ddd9cf; font-family: "DM Mono", monospace; font-size: .9em; }
 .track-meta h2 { font-size: clamp(22px, 4vw, 34px); margin: 5px 0 4px; max-width: 690px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .track-meta p { color: #777b84; margin: 0; font: 12px "DM Mono", monospace; }
 .quiet-button { border: 1px solid #30333a; background: transparent; border-radius: 99px; padding: 10px 16px; cursor: pointer; color: #a9abb1; }
+.workspace-mode #new-track { display: none; }
 .transport { display: grid; grid-template-columns: 36px 56px 36px 42px 1fr 42px; gap: 14px; align-items: center; background: #111217; border: 1px solid #292c33; border-radius: 14px; padding: 18px; margin-bottom: 16px; }
 .play-button { width: 56px; height: 56px; border: 0; border-radius: 50%; background: #f3f1eb; color: #111216; cursor: pointer; font-size: 18px; }
 .transport-secondary { border: 0; background: transparent; color: #777b84; cursor: pointer; font: 12px "DM Mono", monospace; }
