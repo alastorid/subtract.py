@@ -32,6 +32,8 @@ main { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 64px 0 96
 .eyebrow { font: 12px "DM Mono", monospace; letter-spacing: .2em; color: #ff7654; margin: 0 0 18px; }
 h1 { font-size: clamp(48px, 8vw, 100px); line-height: .88; letter-spacing: -.075em; margin: 0; font-weight: 600; }
 h1 em { color: #747780; font-style: normal; }
+#mode-switch { user-select: none; cursor: pointer; transition: color .2s, text-shadow .2s; }
+.workspace-mode #mode-switch { color: #ff7654; text-shadow: 0 0 28px rgba(255,92,53,.24); }
 .intro-copy { color: #9a9da5; font-size: 16px; line-height: 1.7; margin: 0 0 8px; max-width: 420px; }
 code { color: #ddd9cf; font-family: "DM Mono", monospace; font-size: .9em; }
 .drop-card, .progress-card, .error-card { border: 1px solid #292c33; border-radius: 24px; background: linear-gradient(145deg, rgba(27,29,35,.82), rgba(14,15,19,.92)); box-shadow: 0 28px 70px rgba(0,0,0,.22); }

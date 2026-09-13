@@ -20,7 +20,7 @@ import {
 import { separateVocals, type StereoAudio } from "./separation";
 
 type AudioTracks = Record<TrackId, StereoAudio>;
-type QueueJob = { id: string; file: File; name: string };
+type QueueJob = { id: string; file: File; name: string; workspace: boolean };
 
 const $ = <T extends HTMLElement>(selector: string): T => document.querySelector(selector)!;
 const fileInput = $("#file-input") as HTMLInputElement;
@@ -30,6 +30,7 @@ const queuePanel = $("#queue-panel");
 const progressCard = $("#progress-card");
 const studio = $("#studio");
 const errorCard = $("#error-card");
+const historyPanel = $("#history-panel");
 const historyToggle = $("#history-toggle") as HTMLInputElement;
 const player = new StemPlayer();
 
@@ -48,6 +49,7 @@ let persistentHistory: HistorySummary[] = [];
 const sessionHistory = new Map<string, HistoryRecord>();
 let historyLoadToken = 0;
 let historyEnabled = localStorage.getItem("subtract-history-enabled") !== "false";
+let workspaceMode = false;
 
 const formatBytes = (bytes: number): string => {
   if (bytes === 0) return "0 B";
@@ -61,9 +63,10 @@ const displayName = (name: string): string => name.replace(/\.[^.]+$/, "") || "t
 const refreshLayout = () => {
   const busy = Boolean(activeJob) || queue.length > 0;
   dropCard.hidden = hasPlayback || busy;
-  queuePanel.hidden = !busy;
+  queuePanel.hidden = !workspaceMode || !busy;
   progressCard.hidden = !activeJob;
   studio.hidden = !hasPlayback;
+  historyPanel.hidden = !workspaceMode;
 };
 
 const showError = (message: string) => {
@@ -327,7 +330,11 @@ const processJob = async (job: QueueJob) => {
   });
 
   const resultId = crypto.randomUUID();
-  if (!hasPlayback) showTracks(job.name, { original, ...separated }, resultId);
+  if (!hasPlayback || !job.workspace) showTracks(job.name, { original, ...separated }, resultId);
+
+  // Clean mode is deliberately a one-song, one-result experience. The richer
+  // workspace owns queueing and persistent history.
+  if (!job.workspace) return;
 
   const vocals = encodeFloatWav(separated.vocals);
   const instrumental = encodeFloatWav(separated.instrumental);
@@ -376,17 +383,52 @@ const runQueue = async () => {
 };
 
 const enqueueFiles = (files: Iterable<File>) => {
-  const additions = [...files];
+  let additions = [...files];
   if (!additions.length) return;
   if (!navigator.gpu) {
     showError("Please open this page in a recent version of Chrome or Edge on a newer computer.");
     return;
   }
   hideError();
-  queue.push(...additions.map((file) => ({ id: crypto.randomUUID(), file, name: file.name })));
+  if (!workspaceMode) {
+    if (activeJob || queueRunning) {
+      showError("This song is still being separated. Wait for it to finish before choosing another one.");
+      return;
+    }
+    additions = additions.slice(0, 1);
+    player.pause();
+    hasPlayback = false;
+    currentResultId = undefined;
+  }
+  queue.push(...additions.map((file) => ({
+    id: crypto.randomUUID(),
+    file,
+    name: file.name,
+    workspace: workspaceMode,
+  })));
   renderQueue();
   void runQueue();
 };
+
+const setWorkspaceMode = (enabled: boolean) => {
+  workspaceMode = enabled;
+  document.body.classList.toggle("workspace-mode", enabled);
+  fileInput.multiple = enabled;
+  refreshLayout();
+  if (enabled) {
+    if (historyEnabled) void navigator.storage.persist?.();
+    void refreshHistory();
+  }
+};
+
+$("#mode-switch").addEventListener("dblclick", () => {
+  if (workspaceMode && (activeJob || queue.length)) {
+    showError("Let the processing queue finish before returning to single-song mode.");
+    return;
+  }
+  hideError();
+  setWorkspaceMode(!workspaceMode);
+});
 
 historyToggle.checked = historyEnabled;
 $("#history-mode").textContent = historyEnabled ? "New results are saved on this device" : "New results last for this session only";
@@ -448,9 +490,7 @@ document.querySelectorAll<HTMLElement>(".stem-select").forEach((button) => butto
 }));
 document.querySelectorAll<HTMLElement>("[data-download]").forEach((button) => button.addEventListener("click", () => downloadTrack(button.dataset.download as "vocals" | "instrumental")));
 
-if (historyEnabled) void navigator.storage.persist?.();
 if ("serviceWorker" in navigator) void navigator.serviceWorker.register("./sw.js");
 void updateDevice();
-void refreshHistory();
-refreshLayout();
+setWorkspaceMode(false);
 requestAnimationFrame(drawAll);

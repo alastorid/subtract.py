@@ -132,9 +132,10 @@ an optimized two-second overlap to reduce GPU work.
 See [WEBGPU.md](WEBGPU.md) for architecture, hashes, and reproducible export
 instructions.
 
-The browser studio processes multiple dropped songs in a sequential queue while
-the current result remains playable. Finished voice and music WAVs are stored in
-IndexedDB by default, so listening history survives reloads. History saving can
-be disabled persistently from the page; results made while it is off remain only
-for the current browser session. The history panel reports both stem size and the
-browser origin's estimated storage usage.
+The browser opens in a clean single-song mode. Double-clicking *hidden.* in the
+title toggles the full workspace, where multiple dropped songs enter a sequential
+queue while the current result remains playable. Finished voice and music WAVs
+are stored in IndexedDB by default, so workspace history survives reloads.
+History saving can be disabled persistently from the workspace; results made
+while it is off remain only for the current browser session. The history panel
+reports both stem size and the browser origin's estimated storage usage.

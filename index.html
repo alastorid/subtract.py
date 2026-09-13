@@ -31,13 +31,13 @@
       <section class="intro">
         <div>
           <p class="eyebrow">YOUR PRIVATE SONG SPLITTER</p>
-          <h1>Hear what was<br /><em>hidden.</em></h1>
+          <h1>Hear what was<br /><em id="mode-switch">hidden.</em></h1>
         </div>
         <p class="intro-copy">Turn one song into two tracks: the voice and the music. Everything happens on this device, so your song stays private.</p>
       </section>
 
       <section class="drop-card" id="drop-card">
-        <input id="file-input" type="file" accept="audio/*,.wav,.flac,.mp3,.m4a" multiple hidden />
+        <input id="file-input" type="file" accept="audio/*,.wav,.flac,.mp3,.m4a" hidden />
         <button class="drop-target" id="drop-target" type="button">
           <span class="upload-glyph" aria-hidden="true">↥</span>
           <span class="drop-title">Drop a song here</span>
@@ -107,7 +107,7 @@
         <p class="subtraction-note">Choose a row to hear that version.</p>
       </section>
 
-      <section class="history-panel" id="history-panel">
+      <section class="history-panel" id="history-panel" hidden>
         <div class="history-header">
           <div><p class="eyebrow">ON THIS DEVICE</p><h2>Listening history</h2><p id="history-storage">Checking storage…</p></div>
           <label class="history-switch"><span><strong>Save history</strong><small id="history-mode">New results are saved on this device</small></span><input id="history-toggle" type="checkbox" checked /><i aria-hidden="true"></i></label>
